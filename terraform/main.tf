@@ -1,45 +1,54 @@
-resource "aws_s3_bucket" "website_bucket" {
-  bucket = "my-static-website-bucket"
-  acl    = "public-read"
+provider "aws" {
+  region = "us-west-2"  # Change to your preferred region
+}
 
-  website {
-    index_document = "index.html"
+resource "aws_security_group" "web_sg" {
+  name        = "web_sg"
+  description = "Allow HTTP and HTTPS traffic"
+  vpc_id      = "vpc-xxxxxxxx"  # Replace with your VPC ID
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-resource "aws_s3_bucket_object" "index" {
-  bucket = aws_s3_bucket.website_bucket.bucket
-  key    = "index.html"
-  source = "index.html"
-  acl    = "public-read"
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
 }
 
-resource "aws_cloudfront_distribution" "s3_distribution" {
-  origin {
-    domain_name = aws_s3_bucket.website_bucket.bucket_regional_domain_name
-    origin_id   = "S3-my-static-website"
-  }
+resource "aws_instance" "web_server" {
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = "t2.micro"
+  key_name      = "your-key-pair"  # Replace with your key pair name
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-my-static-website"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
+  tags = {
+    Name = "WebServer"
   }
 }

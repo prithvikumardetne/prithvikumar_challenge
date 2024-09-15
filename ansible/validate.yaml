@@ -1,0 +1,18 @@
+- name: Validate web server
+  hosts: webservers
+  tasks:
+    - name: Check if Apache is running
+      service:
+        name: httpd
+        state: started
+
+    - name: Validate content
+      uri:
+        url: http://localhost
+        return_content: yes
+      register: webpage
+
+    - name: Assert content
+      assert:
+        that:
+          - "'Hello World!' in webpage.content"

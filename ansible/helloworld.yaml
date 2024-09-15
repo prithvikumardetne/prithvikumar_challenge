@@ -1,0 +1,28 @@
+---
+- name: Configure web server
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Install Apache
+      yum:
+        name: httpd
+        state: present
+
+    - name: Start Apache
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Create index.html
+      copy:
+        content: |
+          <html>
+          <head>
+          <title>Hello World</title>
+          </head>
+          <body>
+          <h1>Hello World!</h1>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
